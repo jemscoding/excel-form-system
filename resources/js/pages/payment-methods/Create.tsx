@@ -5,7 +5,7 @@ import { useForm, router } from '@inertiajs/react';
 
 // Layout Components
 import type { BreadcrumbItem } from '@/types';
-import { Users } from 'lucide-react';
+import { Users, Banknote } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,18 +16,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Toast Notification Message
 import { toast } from 'sonner';
-import { useToast } from '@/hooks/use-toast';
+
+import PaymentMethodController from '@/actions/App/Http/Controllers/PaymentMethodController';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Client',
-        href: '/clients/Create',
+        title: 'Payment Method',
+        href: '/payment-methods/Create',
     },
-    {
+     {
         title: 'Create',
-        href: '/clients/Create',
-    }
+        href: '/payment-methods/Create',
+    },
 ]
+
 Create.layout = (page: React.ReactNode) =>
     <AppLayout breadcrumbs={breadcrumbs}>
         {page}
@@ -35,79 +37,59 @@ Create.layout = (page: React.ReactNode) =>
 
 
 export default function Create() {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         name: '',
         code: '',
     });
 
-    const {showLoading, showSuccess, showError, dismiss } = useToast();
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
-            e.preventDefault();
-    
-            // Prevent multiple submissions
-            if (isSubmitting) return;
-            setIsSubmitting(true);
-    
-            // Show loading toast (automatically dismisses any existing toast)
-            showLoading('Creating client...');
-    
-            post('/clients', {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Show success toast (automatically dismisses loading)
-                    showSuccess('Client created successfully!', 
-                        `${data.name} (${data.code || 'No code'}) has been added.`
-                    );
-                    
-                    // Reset form
-                    reset();
-                    
-                    // Redirect after delay
-                    setTimeout(() => {
-                        router.visit('/clients');
-                    }, 2000);
-                },
-                onError: (errorErrors) => {
-                    // Get first error message only (don't show multiple toasts)
-                    const errorMessages = Object.values(errorErrors).flat();
-                    const firstError = errorMessages[0] || 'Please check the form for errors.';
-                    
-                    // Show single error toast (automatically dismisses loading)
-                    showError('Failed to create client', firstError);
-                    
-                    setIsSubmitting(false);
-                },
-                onFinish: () => {
-                    setIsSubmitting(false);
-                },
-            });
-        }
-    
+        e.preventDefault();
+
+        const loadingToast = toast.loading('Creating Payment Method...');
+
+        post('/payment-methods', {
+
+            preserveScroll: true,
+            onSuccess: () => {
+
+                toast.dismiss(loadingToast);
+
+                toast.success('Payment Method created successfully!', {
+                    description:`${data.name} (${data.code}) has been added.`,
+                    duration: 4000
+                })
+                setSuccessMessage('Payment Method created successfully! Redirecting...');
+
+                setTimeout(() => {
+                    router.visit('/payment-methods');            
+                }, 2000)
+            },
+        });
+    }
 
     return (
         <>
-            <Head title="Clients" />
+            <Head title="Payment Methods" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4 mx-4">
                 <div className="flex pp-header justify-between">
                     <Header
-                        icon={<Users />}
-                        title="Create Client"
-                        description="Create a new client"
+                        icon = {<Banknote />}
+                        title = "Create Payment Method"
+                        description = "Create a new payment method"
                     />
                 </div>
 
                 <div className="pp-row">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Client Name</Label>
+                            <Label htmlFor="name">Payment Method Name</Label>
                             <Input
                                 id="name"
                                 value={data.name}
                                 onChange={e => setData('name', e.target.value)}
-                                placeholder="Enter client name"
+                                placeholder="Enter payment method name"
                                 required
                             />
                             {errors.name && (
@@ -116,12 +98,12 @@ export default function Create() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="code">Client Code</Label>
+                            <Label htmlFor="code">Payment Method Code</Label>
                             <Input
                                 id="code"
                                 value={data.code}
                                 onChange={e => setData('code', e.target.value)}
-                                placeholder="Enter client code"
+                                placeholder="Enter payment method code"
                                 required
                             />
                             {errors.code && (
@@ -131,12 +113,12 @@ export default function Create() {
 
                         <div className="flex gap-2">
                             <Button type="submit" disabled={processing}>
-                                {processing ? 'Creating...' : 'Create Client'}
+                                {processing ? 'Creating...' : 'Create Payment Method'}
                             </Button>
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => router.visit('/clients')}
+                                onClick={() => router.visit(PaymentMethodController.index())}
                             >
                                 Cancel
                             </Button>

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Box, Banknote, LayoutGrid, UserCircle, UsersRound } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,6 +16,11 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
+import ProductController from '@/actions/App/Http/Controllers/ProductController';
+import ClientController from '@/actions/App/Http/Controllers/ClientController';
+import AgentController from '@/actions/App/Http/Controllers/AgentController';
+import PaymentMethodController from '@/actions/App/Http/Controllers/PaymentMethodController';
+
 // Controller Routes
 
 const mainNavItems: NavItem[] = [
@@ -26,9 +31,24 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Clients',
-        href: '/clients',
-        icon: FolderGit2,
+        href:  ClientController.index(),
+        icon: UserCircle,
     },
+    {
+        title: 'Agents',
+        href:  AgentController.index(),
+        icon: UsersRound,
+    },
+    {
+        title: 'Payment Methods',
+        href:  PaymentMethodController.index(),
+        icon: Banknote,
+    },
+    {
+        title: 'Products',
+        href: ProductController.index(),
+        icon: Box,
+    }
 ];
 
 

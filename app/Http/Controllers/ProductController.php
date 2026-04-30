@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
@@ -12,7 +13,11 @@ class ProductController extends Controller
      */
     public function index()
     {
-        //
+        $products = Product::all();
+
+        return Inertia::render('products/Index', [
+            'products' => $products
+        ]);
     }
 
     /**
@@ -20,7 +25,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        //
+        return Inertia::render('products/Create');
     }
 
     /**
@@ -28,7 +33,13 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|size:9|regex:/^\d{9}$/',
+        ]);
+
+        Product::create($request->all());
+        return redirect()->route('products.index');
     }
 
     /**
@@ -44,7 +55,8 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        //
+        $prpduct = Product::find($product->id);
+        return Inertia::render('products/Edit', compact('product'));
     }
 
     /**
@@ -52,7 +64,13 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|size:9|regex:/^\d{9}$/',
+        ]);
+
+        Product::update($request->all());
+        return redirect()->route('products.index');
     }
 
     /**
@@ -60,6 +78,9 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        $product = Product::find($product->id);
+        $product->delete();
+
+        return redirect()->route('products.index');
     }
 }

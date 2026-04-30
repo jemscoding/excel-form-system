@@ -1,9 +1,3 @@
-export interface Client {
-    id: number; 
-    name: string;
-    code: string;
-}
-
 // Table Interfaces for TableList
 export interface Column {
     label: string;
@@ -20,4 +14,34 @@ export interface Column {
 export interface Action {
     label: string;
     icon: string;
+}
+
+// Table Interfaces
+export interface Client {
+    id: number; 
+    name: string;
+    code: string;
+}
+
+export interface PaymentMethod {
+    id: number;
+    name: string;
+    code: string;
+}
+
+export interface Product {
+    id: number;
+    name: string;
+    code: string;
+    price: number;
+}
+
+export interface Agent {
+    id: number;
+    name: string;
+}
+
+export interface DepositingBank {
+    id: number;
+    name: string;
 }

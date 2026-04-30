@@ -1,4 +1,4 @@
-import { Column, Client } from '@/interfaces/interfaces';
+import { Column, Client, PaymentMethod, Product, Agent } from '@/interfaces/interfaces';
 
 export interface HeaderProps {
     icon: React.ReactNode
@@ -27,6 +27,23 @@ export interface TableListProps {
     } | string;
 };
 
+// Data Props
 export interface ClientProps {
     clients: Client[];
+}
+
+export interface PaymentMethodProps {
+    paymentMethods: PaymentMethod[];
+}
+
+export interface ProductProps {
+    products: Product[];
+}
+
+export interface AgentProps {
+    agents: Agent[];
+}
+
+export interface DepositingBankProps {
+    depositingBanks: DepositingBank[];
 }

@@ -7,7 +7,7 @@ export const ClientTableConfig = {
     columns: [
         {
             key: 'name',
-            label: 'Client Name'
+            label: 'Client Name',
         },
         {
 

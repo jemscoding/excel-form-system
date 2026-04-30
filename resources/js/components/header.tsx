@@ -8,8 +8,8 @@ export const Header = ({
 
     return (
         <div className={`flex items-center gap-4 mb-4`}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-lg">
-                <div className="px-3 lg:px-0 lg:h-6 lg:w-6 text-primary-foreground">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary dark:bg-primary-foreground dark:border-bg-white shadow-lg">
+                <div className="px-3 lg:px-0 lg:h-6 lg:w-6 dark:text-white text-primary-foreground">
                     {icon}
                 </div>
             </div>
