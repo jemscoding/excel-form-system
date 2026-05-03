@@ -14,17 +14,16 @@ import type { BreadcrumbItem } from '@/types';
 import { CreditCard, Plus } from 'lucide-react';
 
 // Data Setup
-import { PaymentMethod } from '@/interfaces/interfaces';
-import { PaymentMethodProps } from '@/props/props'
-import { ClientTableConfig } from '@/tables/client';
-import PaymentMethodController from '@/actions/App/Http/Controllers/PaymentMethodController';
-import { PaymentMethodsTableConfig } from '@/tables/paymentmethod';
+import { DepositingBank } from '@/interfaces/interfaces';
+import { DepositingBankProps } from '@/props/props'
+import { DepositingBankTableConfig } from '@/tables/depositingbank';
+import DepositingBankController from '@/actions/App/Http/Controllers/DepositingBankController';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Payment Methods',
-        href: '/payment-methods',
+        title: 'Depositing Banks',
+        href: DepositingBankController.index(),
     },
 ]
 Index.layout = (page: React.ReactNode) =>
@@ -32,32 +31,32 @@ Index.layout = (page: React.ReactNode) =>
         {page}
     </AppLayout>;
 
-export default function Index({ paymentMethods }: PaymentMethodProps) {
-    const [showPayments, setShowPayments] = useState<PaymentMethod[]>([]);
+export default function Index({ depositingBanks }: DepositingBankProps) {
+    const [showPayments, setShowPayments] = useState<DepositingBank[]>([]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            setShowPayments(paymentMethods);
+            setShowPayments(depositingBanks);
         }, 1000);
 
         return () => clearTimeout(timeoutId);
-    }, [paymentMethods]);
+    }, [depositingBanks]);
 
 
-    const handleEdit = (paymentMethods: PaymentMethod) => {
-        console.log(`Edit payment method with ID: ${paymentMethods.id}`);
-        router.visit(PaymentMethodController.edit(paymentMethods.id));
+    const handleEdit = (depositingBanks: DepositingBank) => {
+        console.log(`Edit payment method with ID: ${depositingBanks.id}`);
+        router.visit(DepositingBankController.edit(depositingBanks.id));
     };
 
-    const handleDelete = (paymentMethods: PaymentMethod) => {
+    const handleDelete = (depositingBanks: DepositingBank) => {
         if (confirm('Are you sure you want to delete this client? ')) {
-            console.log(`Delete payment method with ID: ${paymentMethods.id}`);
-            router.delete(PaymentMethodController.destroy(paymentMethods.id), {
+            console.log(`Delete payment method with ID: ${depositingBanks.id}`);
+            router.delete(DepositingBankController.destroy(depositingBanks.id), {
                 onSuccess: () => {
-                    console.log('Payment Method deleted successfully');
+                    console.log('Depositing Bank deleted successfully');
                 },
                 onError: (errors) => {
-                    console.error('Error deleting payment method:', errors);
+                    console.error('Error deleting deposiiting bank:', errors);
                 }
             });
         }
@@ -70,14 +69,14 @@ export default function Index({ paymentMethods }: PaymentMethodProps) {
                 <div className="flex pp-header justify-between">
                     <Header
                         icon={<CreditCard />}
-                        title="Payment Methods"
-                        description="List of all payment methods"
+                        title="Depositing Banks"
+                        description="List of all depositing banks"
                     />
 
-                    {paymentMethods.length >= 1 && (
-                    <Link href={PaymentMethodController.create()} className="flex items-center">
+                    {depositingBanks.length >= 1 && (
+                    <Link href={DepositingBankController.create()} className="flex items-center">
                         <Button className='cursor-pointer'>
-                            <Plus /> Add Payment Method
+                            <Plus /> Add Depositing Bank
                         </Button>
                     </Link>
                     )}
@@ -86,9 +85,9 @@ export default function Index({ paymentMethods }: PaymentMethodProps) {
 
                 <div className="pp-row">
                     <TableList
-                        data={paymentMethods}
-                        columns={PaymentMethodsTableConfig.columns}
-                        actions={PaymentMethodsTableConfig.actions}
+                        data={depositingBanks}
+                        columns={DepositingBankTableConfig.columns}
+                        actions={DepositingBankTableConfig.actions}
                         indexLabel="#"
                         indexStartFrom={1}
                         showIndex={true}
@@ -96,11 +95,11 @@ export default function Index({ paymentMethods }: PaymentMethodProps) {
                         onView={() => { }}
                         onDelete={handleDelete}
                         emptyTableMessage={{
-                            icon: <Banknote />,
-                            title: "No clients Found",
-                            description: "Click Add Product to see them listed here.",
-                            onActionClick: () => router.visit(PaymentMethodController.create()),
-                            buttonText: "Payment Methods"
+                            icon: <CreditCard />,
+                            title: "No depositing bank Found",
+                            description: "Click Add Depositing Bank to see them listed here.",
+                            onActionClick: () => router.visit(DepositingBankController.create()),
+                            buttonText: "Depositing Bank"
                         }}
                     />
                 </div>

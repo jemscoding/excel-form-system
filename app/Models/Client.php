@@ -12,4 +12,7 @@ class Client extends Model
         'code',
     ];
 
+     public function ExcelForm(){
+        return $this->hasMany(ExcelForm::class);
+    }
 }

@@ -14,7 +14,7 @@ class DepositingBankController extends Controller
     public function index()
     {
         $depositingBanks = DepositingBank::all();
-        return Inertia::render('depositing-banks/Index');
+        return Inertia::render('depositing-banks/Index', compact('depositingBanks'));
     }
 
     /**

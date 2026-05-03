@@ -9,4 +9,8 @@ class DepositingBank extends Model
     protected $fillable = [
         'name',
     ];
+
+     public function ExcelForm(){
+        return $this->hasMany(ExcelForm::class);
+    }
 }

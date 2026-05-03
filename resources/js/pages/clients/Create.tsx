@@ -24,7 +24,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/clients/Create',
     },
     {
-        title: 'Create',
+        title: 'Create new client',
         href: '/clients/Create',
     }
 ]
@@ -59,7 +59,7 @@ export default function Create() {
                 onSuccess: () => {
                     // Show success toast (automatically dismisses loading)
                     showSuccess('Client created successfully!', 
-                        `${data.name} (${data.code || 'No code'}) has been added.`
+                        `${data.name} (AKPH-${data.code || 'No code'}) has been added.`
                     );
                     
                     // Reset form

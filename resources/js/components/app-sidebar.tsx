@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Box, Banknote, LayoutGrid, UserCircle, UsersRound } from 'lucide-react';
+import { Package, CreditCard, Banknote, LayoutGrid, UserCircle, UsersRound } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -20,6 +20,8 @@ import ProductController from '@/actions/App/Http/Controllers/ProductController'
 import ClientController from '@/actions/App/Http/Controllers/ClientController';
 import AgentController from '@/actions/App/Http/Controllers/AgentController';
 import PaymentMethodController from '@/actions/App/Http/Controllers/PaymentMethodController';
+import DepositingBankController from '@/actions/App/Http/Controllers/DepositingBankController';
+import ExcelFormController from '@/actions/App/Http/Controllers/ExcelFormController';
 
 // Controller Routes
 
@@ -27,6 +29,11 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Forms',
+        href: ExcelFormController.create(),
         icon: LayoutGrid,
     },
     {
@@ -47,7 +54,12 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Products',
         href: ProductController.index(),
-        icon: Box,
+        icon: Package,
+    },
+    {
+        title: 'Depositing Banks',
+        href: DepositingBankController.index(),
+        icon: CreditCard,
     }
 ];
 

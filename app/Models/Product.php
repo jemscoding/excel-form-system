@@ -10,4 +10,8 @@ class Product extends Model
       'name',
       'code',  
     ];
+
+     public function ExcelForm(){
+        return $this->hasMany(ExcelForm::class);
+    }
 }
