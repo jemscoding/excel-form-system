@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { Header } from '@/components/header';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,12 +62,12 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
         soa_number: '',
         soa_code: '',
         initial_billing: '',
-        withholding_tax: '0',
+        withholding_tax: '',
         inbound_cost: '',
         service_fee: '',
-        overweight: '0',
-        discount: '0',
-        others: '0',
+        overweight: '',
+        discount: '',
+        others: '',
         depositing_bank_id: '',
         payment_reference_number: '',
         deposit_date: '',
@@ -149,22 +150,31 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
         setData('initial_billing', calculatedInitialBilling.toString());
     }, [data.inbound_cost, data.service_fee]);
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const { showLoading, showSuccess, showError, dismiss } = useToast();
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        const loadingToast = toast.loading('Adding entry to Excel...');
+        showLoading('Adding entry to Excel...');
 
         post('/excel-forms', {
             preserveScroll: true,
             onSuccess: () => {
-                toast.dismiss(loadingToast);
-                toast.success('Entry added to Excel successfully!');
+                dismiss();
+                showSuccess('Entry added to Excel successfully!');
                 reset();
             },
-            onError: (errors) => {
-                toast.dismiss(loadingToast);
-                toast.error('Failed to add entry');
-                console.error(errors);
+            onError: (errorErrors) => {
+                // Get first error message only (don't show multiple toasts)
+                const errorMessages = Object.values(errorErrors).flat();
+                const firstError = errorMessages[0] || 'Please check the form for errors.';
+
+                // Show single error toast (automatically dismisses loading)
+                showError('Failed to create excel data', firstError);
+
+                setIsSubmitting(false);
             },
         });
     };
@@ -311,7 +321,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                 <Label>Total CBM</Label>
                                 <Input
                                     type="number"
-                                    step="0.01"
                                     value={data.total_cbm}
                                     onChange={(e) => setData('total_cbm', e.target.value)}
                                     placeholder="e.g., 1.5"
@@ -322,7 +331,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                 <Label>Weight (kg)</Label>
                                 <Input
                                     type="number"
-                                    step="0.01"
                                     value={data.weight}
                                     onChange={(e) => setData('weight', e.target.value)}
                                     placeholder="e.g., 8"
@@ -387,7 +395,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.initial_billing}
                                         readOnly
                                         className="pl-9"
@@ -402,7 +409,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.inbound_cost}
                                         onChange={(e) => setData('inbound_cost', e.target.value)}
                                         className="pl-9"
@@ -418,7 +424,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.service_fee}
                                         onChange={(e) => setData('service_fee', e.target.value)}
                                         className="pl-9"
@@ -434,7 +439,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.withholding_tax}
                                         onChange={(e) => setData('withholding_tax', e.target.value)}
                                         className="pl-9"
@@ -449,7 +453,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.overweight}
                                         onChange={(e) => setData('overweight', e.target.value)}
                                         className="pl-9"
@@ -464,7 +467,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.discount}
                                         onChange={(e) => setData('discount', e.target.value)}
                                         className="pl-9"
@@ -479,7 +481,6 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                     <PhilippinePeso className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         type="number"
-                                        step="0.01"
                                         value={data.others}
                                         onChange={(e) => setData('others', e.target.value)}
                                         className="pl-9"

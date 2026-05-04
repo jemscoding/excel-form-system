@@ -34,7 +34,6 @@ Create.layout = (page: React.ReactNode) =>
 export default function Create() {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
-        code: '',
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +56,7 @@ export default function Create() {
             onSuccess: () => {
                 // Show success toast (automatically dismisses loading)
                 showSuccess('Product created successfully!',
-                    `${data.name} (${data.code || 'No code'}) has been added.`
+                    `${data.name} has been added.`
                 );
 
                 // Reset form
@@ -128,28 +127,6 @@ export default function Create() {
                             )}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="code">
-                                Product Code
-                                <span className='text-slate-500 text-xs ml-1'>(Optional - 9 digits)</span>
-                            </Label>
-                            <Input
-                                id="code"
-                                value={data.code}
-                                onChange={handleCodeChange}
-                                type="text"
-                                inputMode="numeric"
-                                placeholder="Enter 9-digit product code"
-                            />
-                            {data.code && data.code.length === 9 && (
-                                <p className="text-xs text-green-500">
-                                    Code: {data.code}
-                                </p>
-                            )}
-                            {errors.code && (
-                                <p className="text-sm text-red-500">{errors.code}</p>
-                            )}
-                        </div>
 
                         <div className="flex gap-2 pt-4">
                             <Button

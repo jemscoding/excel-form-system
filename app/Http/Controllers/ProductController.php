@@ -35,7 +35,6 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|size:9|regex:/^\d{9}$/',
         ]);
 
         Product::create($request->all());
@@ -66,7 +65,6 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|size:9|regex:/^\d{9}$/',
         ]);
 
         Product::update($request->all());
