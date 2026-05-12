@@ -71,6 +71,9 @@ class PaymentMethodController extends Controller
      */
     public function destroy(PaymentMethod $paymentMethod)
     {
-        //
+        $paymentMethod = PaymentMethod::findOrFail($paymentMethod->id);
+        $paymentMethod->delete();
+
+        return redirect()->route('payment-methods.index');
     }
 }

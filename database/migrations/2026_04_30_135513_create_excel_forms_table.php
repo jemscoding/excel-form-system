@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('client_id')->constrained();
             $table->foreignId('product_id')->constrained();
+            $table->integer('quantity');
             $table->foreignId('agent_id')->constrained();
             $table->foreignId('payment_method_id')->constrained();
             $table->foreignId('depositing_bank_id')->constrained();

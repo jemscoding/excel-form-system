@@ -7,7 +7,7 @@ use App\Models\Client;
 use App\Models\DepositingBank;
 use App\Models\PaymentMethod;
 use App\Models\Product;
-use App\Services\ExcelWriterService;
+use App\Services\ExcelWriter\ExcelWriterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -35,8 +35,8 @@ class ExcelFormController extends Controller
         $clients = Client::all();
 
         $purposes = [
-            ['id' => '1', 'name' => 'Freight Payment'],
-            ['id' => '2', 'name' => 'Others']
+            ['id' => '1', 'name' => 'FREIGHT PAYMENT'],
+            ['id' => '2', 'name' => 'OTHERS']
         ];
 
         $status = [
@@ -62,6 +62,7 @@ class ExcelFormController extends Controller
                 'client_name' => 'required|string|max:255',
                 'client_code' => 'required|string|max:255',
                 'product_id' => 'required|exists:products,id',
+                'quantity' => 'nullable|integer|min:1', // ADD THIS LINE
                 'pkgs' => 'nullable|integer',
                 'total_cbm' => 'nullable|numeric',
                 'weight' => 'nullable|numeric',
@@ -102,6 +103,9 @@ class ExcelFormController extends Controller
             $validated['client_name'] = $client->name ?? $validated['client_name'] ?? '';
             $validated['created_at'] = now()->format('Y-m-d H:i:s');
 
+            // Ensure quantity has a default value
+            $validated['quantity'] = isset($validated['quantity']) ? (int)$validated['quantity'] : 1;
+
             Log::info('Data prepared for Excel:', $validated);
 
             $result = $this->excelWriter->addEntry($validated);
@@ -109,7 +113,7 @@ class ExcelFormController extends Controller
             Log::info('Excel entry successful', $result);
 
             return redirect()->route('excel-forms.create')
-                ->with('success', "Entry #{$result['index']} added successfully!");
+                ->with('success', "Entry #{$result['index']} added successfully! ({$result['quantity']} row(s) created)");
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error: ', $e->errors());
             return back()->withErrors($e->errors())->withInput();

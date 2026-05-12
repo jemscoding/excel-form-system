@@ -55,6 +55,7 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
         client_name: '',
         client_code: '',
         product_id: '',
+        quantity: '',
         pkgs: '',
         total_cbm: '',
         weight: '',
@@ -261,11 +262,11 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
 
                             {/* Client Code Selection using shadcn Select */}
                             <div>
-                                <Label>Client Code *</Label>
+                                <Label>Client Code (Autofill)</Label>
                                 <Select
                                     value={data.client_code}
                                     onValueChange={handleClientCodeChange}
-                                    disabled
+                                    disabled = {true}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Select Client Code" />
@@ -304,7 +305,17 @@ export default function Create({ agents, depositingBanks, paymentMethods, produc
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
-                                {errors.product_id && <p className="text-red-500 text-sm mt-1">{errors.product_id}</p>}
+                            {errors.product_id && <p className="text-red-500 text-sm mt-1">{errors.product_id}</p>}
+                            </div>
+
+                            <div>
+                                <Label>Item Quantity</Label>
+                                <Input
+                                    type = "number"
+                                    value = {data.quantity}
+                                    onChange={(e) => setData('quantity', e.target.value)}
+                                    placeholder='e.g., 1'
+                                />
                             </div>
 
                             <div>
