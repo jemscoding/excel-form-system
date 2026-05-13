@@ -14,7 +14,7 @@ use Inertia\Inertia;
 
 class ExcelFormController extends Controller
 {
-    protected $excelWriter;
+    protected ExcelWriterService $excelWriter;
 
     public function __construct(ExcelWriterService $excelWriter)
     {
@@ -83,6 +83,7 @@ class ExcelFormController extends Controller
                 'purpose' => 'nullable|string',
                 'agent_id' => 'nullable|exists:agents,id',
                 'payment_method_id' => 'nullable|exists:payment_methods,id',
+                'handler' => 'nullable|string|max:255',
                 'status' => 'required|string',
             ]);
 
@@ -98,9 +99,11 @@ class ExcelFormController extends Controller
             // Add display names to data
             $validated['depositing_bank_name'] = $depositingBank->name ?? '';
             $validated['payment_method_name'] = $paymentMethod->name ?? '';
+            $validated['payment_method_code'] = $paymentMethod->code ?? '';
             $validated['agent_name'] = $agent->name ?? '';
             $validated['product_name'] = $product->name ?? '';
             $validated['client_name'] = $client->name ?? $validated['client_name'] ?? '';
+            $validated['handler'] = $validated['handler'] ?? '';
             $validated['created_at'] = now()->format('Y-m-d H:i:s');
 
             // Ensure quantity has a default value

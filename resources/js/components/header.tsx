@@ -1,10 +1,6 @@
-import { HeaderProps } from './props/props'
+import type { HeaderProps } from './props/props';
 
-export const Header = ({
-    icon,
-    title,
-    description
-}: HeaderProps) => {
+export const Header = ({ icon, title, description }: HeaderProps) => {
 
     return (
         <div className={`flex items-center gap-4 mb-4`}>

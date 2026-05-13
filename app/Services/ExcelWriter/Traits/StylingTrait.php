@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 trait StylingTrait
 {
+    protected Worksheet $sheet;
 
     protected function applyCellStyle(int $row, bool $isHeader = false)
     {
@@ -193,7 +194,7 @@ trait StylingTrait
     {
         $columns = [
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'
+            'N', 'O'
         ];
 
         foreach ($columns as $column) {
@@ -204,11 +205,32 @@ trait StylingTrait
                 ->setWrapText(false);
 
                 $sheet->getStyle($cellCoordinate)->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'FFFFFF']],
+                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '000000']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '297A09']]
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FCF2C0']]
                 ]);
              
+                $sheet->getRowDimension($row)->setRowHeight(25);
+        };
+
+        $columns = [
+            'Q', 'R', 'S', 'T'
+        ];
+
+        foreach ($columns as $column) {
+            $cellCoordinate = $column . $row;
+              $sheet->getStyle($cellCoordinate)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER)
+                ->setWrapText(false);
+
+                $sheet->getStyle($cellCoordinate)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '000000']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FCF2C0']]
+                ]);
+             
+                $sheet->getRowDimension($row)->setRowHeight(25);
         };
     }   
 }

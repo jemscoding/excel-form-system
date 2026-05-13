@@ -2,10 +2,11 @@
 
 namespace App\Services\ExcelWriter\Traits;
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 trait YearlySheetTrait
 {
@@ -31,18 +32,18 @@ trait YearlySheetTrait
             'V' => 'Balance', 'W' => 'Status', 'Y' => 'AKPH BILLING', 'Z' => 'HANDLER',
         ];
 
-        $headerRow = 2;
+        $headerRow = 1;
         foreach ($headers as $col => $header) {
             $sheet->setCellValue($col . $headerRow, $header);
         }
 
         $this->applyYearlyHeaderStyle($sheet, $headerRow);
-        $sheet->freezePane('A3');
+        $sheet->freezePane('A2');
 
         $columnWidths = [
             'A' => 8, 'B' => 18, 'C' => 18, 'D' => 20, 'E' => 18, 'F' => 60, 'G' => 10,
             'H' => 12, 'I' => 15, 'J' => 22, 'K' => 60, 'L' => 18, 'M' => 15, 'N' => 18,
-            'O' => 15, 'P' => 18, 'Q' => 22, 'R' => 15, 'S' => 15, 'T' => 12, 'U' => 12,
+            'O' => 60, 'P' => 18, 'Q' => 22, 'R' => 40, 'S' => 30, 'T' => 30, 'U' => 30,
             'V' => 12, 'W' => 12, 'Y' => 16, 'Z' => 16
         ];
 
@@ -75,8 +76,8 @@ trait YearlySheetTrait
         }
 
         $lastRow = $yearlySheet->getHighestRow();
-        if ($lastRow < 2) {
-            $lastRow = 2;  // Headers are at row 2, so start data from row 3
+        if ($lastRow < 1) {
+            $lastRow = 1;  // Headers are at row 1, so start data from row 2
         }
 
         $newRow = $lastRow + 1;
@@ -126,11 +127,11 @@ trait YearlySheetTrait
         $yearlySheet->setCellValue('V' . $newRow, $balance);
         $yearlySheet->setCellValue('W' . $newRow, $status);
         $yearlySheet->setCellValue('Y' . $newRow, $akphbilling);
-        $yearlySheet->setCellValue('Z' . $newRow, $handler);
+        $yearlySheet->setCellValue('Z' . $newRow, $data['handler'] ?? '');
 
         // Apply base styling to all data columns (A to Z)
         $allColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
-                       'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'Y', 'Z'];
+                       'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',];
         
         foreach ($allColumns as $col) {
             $cellCoordinate = $col . $newRow;
@@ -139,17 +140,57 @@ trait YearlySheetTrait
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER)
                 ->setWrapText(true);
+            $yearlySheet->getStyle($cellCoordinate)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ]
+                ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $statusColor]]
+            ]);
             
-            // Apply status-based fill color to all columns EXCEPT Y and Z
-            if (!in_array($col, ['Y', 'Z'])) {
-                $yearlySheet->getStyle($cellCoordinate)->applyFromArray([
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => $statusColor]
+        }
+
+            $yearlySheet->getStyle('X' . $newRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' =>Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
+                ]
+            ]);
+
+            $yearlySheet->getStyle('Y'. $newRow)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER)
+                ->setWrapText(true);
+
+            $yearlySheet->getStyle('Y' . $newRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' =>Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '99ACBF']]
+                ]
+            ]);
+
+            $yearlySheet->getStyle('Z' . $newRow)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER)
+                ->setWrapText(true);
+
+                $yearlySheet->getStyle('Z' . $newRow)->applyFromArray([
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' =>Border::BORDER_THIN,
+                            'color' => ['rgb' => 'CCCCCC']
+                        ],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'C78197']]
                     ]
                 ]);
-            }
-        }
 
         // Apply currency formatting
         $currencyColumns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];

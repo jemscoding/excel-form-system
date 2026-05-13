@@ -37,9 +37,10 @@ return new class extends Migration
             $table->decimal('balance', 8, 2);
             $table->string('payment_reference_number');
             $table->enum('status', ['pending', 'paid', 'unpaid'])->default('pending');
+            $table->string('handler')->nullable();
             $table->timestamps();
-            $table->decimal('total');
-            $table->enum('purpose',['freight_payment', 'pthers'])->default('freight_payment');
+            $table->decimal('total', 8, 2);
+            $table->enum('purpose',['freight_payment', 'others'])->default('freight_payment');
         });
     }
 

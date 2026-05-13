@@ -53,7 +53,7 @@ class ExcelWriterService
         if (file_exists($this->filePath)) {
             Log::info('Loading existing Excel file');
             $this->spreadsheet = IOFactory::load($this->filePath);
-            
+
             // Verify sheets exist after loading
             $this->ensureSheetsExist();
         } else {
@@ -71,10 +71,10 @@ class ExcelWriterService
             $this->sheet = $this->spreadsheet->getActiveSheet();
             $this->sheet->setTitle('DAILY');
         }
-        
+
         Log::info('Sheet initialized: ' . $this->sheet->getTitle() . ' (Height: ' . $this->sheet->getHighestRow() . ')');
     }
-    
+
     protected function ensureSheetsExist()
     {
         // Check if DAILY sheet exists
@@ -87,7 +87,7 @@ class ExcelWriterService
                 Log::info('Renamed active sheet to DAILY');
             }
         }
-        
+
         // Ensure YEARLY and BANK sheets exist
         if (!$this->spreadsheet->getSheetByName($this->getYearlySheetName())) {
             Log::info('Creating missing YEARLY sheet');
@@ -95,7 +95,7 @@ class ExcelWriterService
             $this->spreadsheet->addSheet($yearlySheet);
             $this->setupYearlyShipmentSheet($yearlySheet);
         }
-        
+
         if (!$this->spreadsheet->getSheetByName($this->getBankTransactionSheetName())) {
             Log::info('Creating missing BANK TRANSACTION sheet');
             $bankSheet = new Worksheet($this->spreadsheet, $this->getBankTransactionSheetName());
@@ -150,11 +150,6 @@ class ExcelWriterService
         try {
             Log::info('Adding entry to Excel', $data);
             $this->ensureDirectoryExists();
-            
-            // CRITICAL: Reload the spreadsheet and sheet reference to ensure we have the latest state
-            $this->initializeExcel();
-            $this->setSheetReference($this->sheet);
-            $this->setSpreadsheetReference($this->spreadsheet);
 
             $quantity = isset($data['quantity']) ? (int)$data['quantity'] : 1;
             Log::info("Processing quantity: {$quantity} item(s)");
@@ -229,9 +224,13 @@ class ExcelWriterService
                 $this->sheet->getRowDimension($currentRow)->setRowHeight(20);
 
                 $this->addToYearlyShipmentSheet($data, $rowIndex);
+
+                // Add to bank transaction sheet (aggregates amounts)
                 $this->addToBankTransactionSheet($data, $rowIndex, $amountToBePaid);
             }
 
+            // CRITICAL: Flush the bank transaction sheet to write aggregated amounts
+            $this->flushBankTransactionSheet();
 
             $writer = new Xlsx($this->spreadsheet);
             $writer->save($this->filePath);

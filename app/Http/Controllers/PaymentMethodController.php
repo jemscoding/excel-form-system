@@ -35,7 +35,7 @@ class PaymentMethodController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:255',
+            'code' => 'nullable|string|max:255',
         ]);
 
         PaymentMethod::create($request->all());
