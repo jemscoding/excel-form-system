@@ -2,7 +2,6 @@
 
 namespace App\Services\ExcelWriter\Traits;
 
-use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -12,19 +11,20 @@ trait BankTransactionTrait
 {
     protected Spreadsheet $spreadsheet;
 
-    // Store aggregated amounts in memory
-    protected array $aggregatedAmounts = [];
-
     // Store totals for each bank
     protected array $bankTotals = [
         'BDO' => 0,
         'UNIONBANK' => 0,
         'ANGKAT' => 0,
         'GCASH' => 0,
+        'GRAND_TOTAL' => 0,
     ];
 
-    // Track quantity count for suffix
-    protected array $orderReferenceCounts = [];
+    // Track suffix counts for order references
+    protected array $suffixCounts = [];
+
+    // Store all entries to write at once
+    protected array $entries = [];
 
     public function setBankTransactionSpreadsheet(Spreadsheet $spreadsheet)
     {
@@ -65,20 +65,11 @@ trait BankTransactionTrait
         // ============ ROW 2: SUMMARY TOTALS ROW ============
         $summaryRow = 2;
         
-        // Summary label
-        $sheet->setCellValue('A' . $summaryRow, 'SUMMARY:');
-        $sheet->mergeCells('A' . $summaryRow . ':F' . $summaryRow);
-        $sheet->getStyle('A' . $summaryRow)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '000000']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D3D3D3']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER]
-        ]);
 
-        // Grand Total for TOTAL PHP column (G) - Above the header
+        // Grand Total for TOTAL PHP column (G)
         $sheet->setCellValue('G' . $summaryRow, '₱0.00');
         $sheet->getStyle('G' . $summaryRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '006100']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'C6EFCE']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
         $sheet->getStyle('G' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
@@ -87,7 +78,7 @@ trait BankTransactionTrait
         $sheet->setCellValue('Q' . $summaryRow, '₱0.00');
         $sheet->getStyle('Q' . $summaryRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D3D3D3']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '97DB97']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
         $sheet->getStyle('Q' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
@@ -96,7 +87,7 @@ trait BankTransactionTrait
         $sheet->setCellValue('R' . $summaryRow, '₱0.00');
         $sheet->getStyle('R' . $summaryRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D3D3D3']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '97DB97']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
         $sheet->getStyle('R' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
@@ -105,7 +96,7 @@ trait BankTransactionTrait
         $sheet->setCellValue('S' . $summaryRow, '₱0.00');
         $sheet->getStyle('S' . $summaryRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D3D3D3']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '97DB97']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
         $sheet->getStyle('S' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
@@ -114,7 +105,7 @@ trait BankTransactionTrait
         $sheet->setCellValue('T' . $summaryRow, '₱0.00');
         $sheet->getStyle('T' . $summaryRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D3D3D3']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '97DB97']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
         $sheet->getStyle('T' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
@@ -168,86 +159,30 @@ trait BankTransactionTrait
     }
 
     /**
-     * Get the unique key for aggregation based on order reference and client
+     * Get the next suffix for an order reference (A, B, C, etc.)
      */
-    protected function getAggregationKey(array $data): string
+    protected function getNextSuffix(string $orderReference): string
     {
-        return md5(($data['order_reference'] ?? '') . '_' . ($data['client_code'] ?? ''));
+        if (!isset($this->suffixCounts[$orderReference])) {
+            $this->suffixCounts[$orderReference] = 0;
+        }
+        
+        $count = $this->suffixCounts[$orderReference];
+        $this->suffixCounts[$orderReference]++;
+        
+        return chr(65 + ($count));
     }
 
     /**
-     * Get suffix letter for multiple items with same order reference
+     * Write all entries to the bank transaction sheet
      */
-    protected function getSuffixForOrderReference(string $orderReference): string
-    {
-        if (!isset($this->orderReferenceCounts[$orderReference])) {
-            $this->orderReferenceCounts[$orderReference] = 0;
-        }
-        
-        $count = $this->orderReferenceCounts[$orderReference];
-        $this->orderReferenceCounts[$orderReference]++;
-        
-        if ($count === 0) {
-            return '';
-        }
-        
-        // Return capital letters: A, B, C, ... Z, AA, AB, etc.
-        $letters = '';
-        while ($count >= 0) {
-            $letters = chr(65 + ($count % 26)) . $letters;
-            $count = intdiv($count, 26) - 1;
-            if ($count < 0) break;
-        }
-        return '-' . $letters;
-    }
-
-    /**
-     * Aggregate amount for the same order reference
-     */
-    protected function aggregateAmount(array $data, float $amountToBePaid): array
-    {
-        $key = $this->getAggregationKey($data);
-        $orderReference = $data['order_reference'] ?? '';
-
-        if (!isset($this->aggregatedAmounts[$key])) {
-            $this->aggregatedAmounts[$key] = [
-                'amount' => 0,
-                'data' => $data,
-                'row_index' => null,
-                'quantity_count' => 0,
-                'suffix' => ''
-            ];
-        }
-
-        $this->aggregatedAmounts[$key]['amount'] += $amountToBePaid;
-        $this->aggregatedAmounts[$key]['quantity_count']++;
-        
-        // Generate suffix based on count (for display in shipment ref)
-        $count = $this->aggregatedAmounts[$key]['quantity_count'] - 1;
-        if ($count > 0) {
-            $this->aggregatedAmounts[$key]['suffix'] = $this->getSuffixForMultipleItems($count);
-        }
-
-        return $this->aggregatedAmounts[$key];
-    }
-
-    /**
-     * Get suffix for multiple items (A, B, C, etc.)
-     */
-    protected function getSuffixForMultipleItems(int $count): string
-    {
-        return '-' . chr(65 + $count);
-    }
-
-    /**
-     * Write all aggregated amounts to the bank transaction sheet
-     */
-   protected function writeAggregatedAmountsToSheet(): void
+    protected function writeEntriesToSheet(): void
     {
         $bankTransactionSheet = $this->spreadsheet->getSheetByName($this->getBankTransactionSheetName());
         if (!$bankTransactionSheet) {
-            Log::error('Bank transaction sheet not found!');
-            return;
+            $bankTransactionSheet = new Worksheet($this->spreadsheet, $this->getBankTransactionSheetName());
+            $this->spreadsheet->addSheet($bankTransactionSheet);
+            $this->setupBankTransactionSheet($bankTransactionSheet);
         }
 
         $lastRow = $bankTransactionSheet->getHighestRow();
@@ -258,30 +193,45 @@ trait BankTransactionTrait
         $currentRow = $lastRow + 1;
         $rowIndex = $lastRow - 2;
 
-        // Reset bank totals
+        // ============ READ EXISTING TOTALS FROM SHEET ============
+        $summaryRow = 2;
+        
+        // Read existing totals from the sheet
+        $existingGrandTotal = floatval(str_replace('₱', '', str_replace(',', '', $bankTransactionSheet->getCell('G' . $summaryRow)->getValue())));
+        $existingBDO = floatval(str_replace('₱', '', str_replace(',', '', $bankTransactionSheet->getCell('Q' . $summaryRow)->getValue())));
+        $existingUnionbank = floatval(str_replace('₱', '', str_replace(',', '', $bankTransactionSheet->getCell('R' . $summaryRow)->getValue())));
+        $existingAngkat = floatval(str_replace('₱', '', str_replace(',', '', $bankTransactionSheet->getCell('S' . $summaryRow)->getValue())));
+        $existingGcash = floatval(str_replace('₱', '', str_replace(',', '', $bankTransactionSheet->getCell('T' . $summaryRow)->getValue())));
+
+        // Initialize totals with existing values
         $this->bankTotals = [
-            'BDO' => 0,
-            'UNIONBANK' => 0,
-            'ANGKAT' => 0,
-            'GCASH' => 0,
-            'GRAND_TOTAL' => 0,
+            'BDO' => $existingBDO,
+            'UNIONBANK' => $existingUnionbank,
+            'ANGKAT' => $existingAngkat,
+            'GCASH' => $existingGcash,
+            'GRAND_TOTAL' => $existingGrandTotal,
         ];
 
-        foreach ($this->aggregatedAmounts as $key => $aggregated) {
-            $data = $aggregated['data'];
-            $totalAmount = $aggregated['amount'];
-            $quantityCount = $aggregated['quantity_count'];
-            
-            $shipmentRef = $data['order_reference'] ?? '';
+        // Reset suffix counts for each flush (but keep existing data's suffixes)
+        $this->suffixCounts = [];
 
-            // Write data
+        foreach ($this->entries as $entry) {
+            $data = $entry['data'];
+            $amount = $entry['amount'];
+            $orderReference = $data['order_reference'] ?? '';
+            
+            // Get suffix for this order reference (A, B, C, etc. for multiple items)
+            $suffix = $this->getNextSuffix($orderReference);
+            $shipmentRef = $orderReference . $suffix;
+
+            // Write each entry as a separate row
             $bankTransactionSheet->setCellValue('A' . $currentRow, $rowIndex);
             $bankTransactionSheet->setCellValue('B' . $currentRow, isset($data['created_at']) ? date('m/d/Y', strtotime($data['created_at'])) : '');
             $bankTransactionSheet->setCellValue('C' . $currentRow, isset($data['deposit_date']) ? date('m/d/Y', strtotime($data['deposit_date'])) : '');
             $bankTransactionSheet->setCellValue('D' . $currentRow, isset($data['created_at']) ? date('h:i:s A', strtotime($data['created_at'])) : '');
-            $bankTransactionSheet->setCellValue('E' . $currentRow, $data['client_code'] ?? '');
+            $bankTransactionSheet->setCellValue('E' . $currentRow, 'AKPH-' . ($data['client_code'] ?? ''));
             $bankTransactionSheet->setCellValue('F' . $currentRow, $data['depositing_bank_name'] ?? '');
-            $bankTransactionSheet->setCellValue('G' . $currentRow, $totalAmount);
+            $bankTransactionSheet->setCellValue('G' . $currentRow, $amount);
 
             $receivingBank = $data['payment_method_name'] ?? '';
             $receivingBankCode = $data['payment_method_code'] ?? '';
@@ -293,54 +243,49 @@ trait BankTransactionTrait
             $bankTransactionSheet->setCellValue('L' . $currentRow, $shipmentRef);
             $bankTransactionSheet->setCellValue('M' . $currentRow, $data['soa_code'] ?? '');
 
-            // Add note for combined items
-            if ($quantityCount > 1) {
-                $bankTransactionSheet->setCellValue('N' . $currentRow, "({$quantityCount} items)");
-                $bankTransactionSheet->getStyle('N' . $currentRow)->getFont()->setItalic(true)->setSize(8);
-            }
-
-            // Place amount in bank column and update totals
-            $bankPlaced = $this->placeAmountInBankColumn($bankTransactionSheet, $currentRow, $receivingBank, $totalAmount);
+            // Place amount in appropriate bank column and update totals
+            $bankPlaced = $this->placeAmountInBankColumn($bankTransactionSheet, $currentRow, $receivingBank, $amount);
             
-            // Update totals
+            // Update running totals (add to existing)
             switch ($bankPlaced) {
                 case 'BDO':
-                    $this->bankTotals['BDO'] += $totalAmount;
+                    $this->bankTotals['BDO'] += $amount;
                     break;
                 case 'UNIONBANK':
-                    $this->bankTotals['UNIONBANK'] += $totalAmount;
+                    $this->bankTotals['UNIONBANK'] += $amount;
                     break;
                 case 'ANGKAT':
-                    $this->bankTotals['ANGKAT'] += $totalAmount;
+                    $this->bankTotals['ANGKAT'] += $amount;
                     break;
                 case 'GCASH':
-                    $this->bankTotals['GCASH'] += $totalAmount;
+                    $this->bankTotals['GCASH'] += $amount;
                     break;
             }
-            $this->bankTotals['GRAND_TOTAL'] += $totalAmount;
+            $this->bankTotals['GRAND_TOTAL'] += $amount;
 
-            // Apply styling
+            // Format currency
+            $bankTransactionSheet->getStyle('G' . $currentRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
+
+            // Apply styling to the current row
             $bankColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'Q', 'R', 'S', 'T'];
             foreach ($bankColumns as $col) {
-                $bankTransactionSheet->getStyle($col . $currentRow)->getAlignment()
+                $cellCoordinate = $col . $currentRow;
+                $bankTransactionSheet->getStyle($cellCoordinate)->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER)
                     ->setWrapText(true);
+
+                $bankTransactionSheet->getStyle($cellCoordinate)->getFont()->setBold(true);
             }
 
-            // Highlight combined rows
-            if ($quantityCount > 1) {
-                $bankTransactionSheet->getStyle('A' . $currentRow . ':T' . $currentRow)
-                    ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF9C4');
-            }
+            // Set row height
+            $bankTransactionSheet->getRowDimension($currentRow)->setRowHeight(15);
 
             $currentRow++;
             $rowIndex++;
         }
 
-        // Update the summary row (row 2) with calculated totals
-        $summaryRow = 2;
-        
+        // Update the summary row (row 2) with accumulated totals
         $bankTransactionSheet->setCellValue('G' . $summaryRow, $this->bankTotals['GRAND_TOTAL']);
         $bankTransactionSheet->getStyle('G' . $summaryRow)->getNumberFormat()->setFormatCode('₱#,##0.00');
         
@@ -382,36 +327,41 @@ trait BankTransactionTrait
                 $sheet->getStyle('T' . $row)->getNumberFormat()->setFormatCode('₱#,##0.00');
                 return 'GCASH';
             default:
-                Log::info("Unknown receiving bank: {$receivingBank}");
                 return 'UNKNOWN';
         }
     }
 
     protected function addToBankTransactionSheet(array $data, int $rowIndex, float $amountToBePaid)
     {
-        // Aggregate the amount instead of writing immediately
-        $this->aggregateAmount($data, $amountToBePaid);
+        // Store each entry individually (no aggregation)
+        $this->entries[] = [
+            'data' => $data,
+            'amount' => $amountToBePaid,
+            'row_index' => $rowIndex
+        ];
     }
 
     /**
-     * Call this method after all entries are added to write aggregated amounts
+     * Call this method after all entries are added to write all entries
      */
     public function flushBankTransactionSheet(): void
     {
-        if (!empty($this->aggregatedAmounts)) {
-            $this->writeAggregatedAmountsToSheet();
-            $this->aggregatedAmounts = [];
+        if (!empty($this->entries)) {
+            $this->writeEntriesToSheet();
+            $this->entries = [];
+            $this->suffixCounts = [];
         }
     }
 
-    public function getAggregatedAmounts(): array
+    public function getEntries(): array
     {
-        return $this->aggregatedAmounts;
+        return $this->entries;
     }
 
-    public function clearAggregatedAmounts(): void
+    public function clearEntries(): void
     {
-        $this->aggregatedAmounts = [];
+        $this->entries = [];
+        $this->suffixCounts = [];
     }
 
     public function getBankTotals(): array

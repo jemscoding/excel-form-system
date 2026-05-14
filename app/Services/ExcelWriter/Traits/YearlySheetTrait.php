@@ -11,8 +11,11 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 trait YearlySheetTrait
 {
     protected Spreadsheet $spreadsheet;
+    
+    // Track current month to avoid duplicate headers
+    protected string $currentMonthHeader = '';
 
-    public function setSpreadsheet(Spreadsheet$spreadsheet)
+    public function setSpreadsheet(Spreadsheet $spreadsheet)
     {
         $this->spreadsheet = $spreadsheet;
     }
@@ -52,17 +55,76 @@ trait YearlySheetTrait
         }
     }
 
+    /**
+     * Get the month from a date
+     */
+    protected function getMonthFromDate(?string $date): string
+    {
+        if (empty($date)) {
+            return "AKPH " . date('Y') . " - " . "Empty Month";
+        }
+        return "AKPH " . date('Y', strtotime($date)) . " - " . strtoupper(date('F', strtotime($date)));
+    }
+
+    /**
+     * Add a month header row
+     */
+    protected function addMonthHeaderRow(Worksheet $sheet, int $row, string $monthYear): void
+    {
+        // Format: AKPH 2024 - JANUARY
+        $headerText = strtoupper($monthYear);
+        
+        // Merge columns A to Z for the month header
+        $sheet->mergeCells('A' . $row . ':Z' . $row);
+        $sheet->setCellValue('A' . $row, $headerText);
+        
+        // Style the month header
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'D91111']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ]
+        ]);
+        
+        $sheet->getRowDimension($row)->setRowHeight(22);
+    }
+
+    /**
+     * Find the last month header row
+     */
+    protected function findLastMonthHeaderRow(Worksheet $sheet): ?int
+    {
+        $highestRow = $sheet->getHighestRow();
+        for ($row = $highestRow; $row >= 2; $row--) {
+            $cellValue = $sheet->getCell('A' . $row)->getValue();
+            // Check if this matches the new pattern: AKPH 2024 - JANUARY
+            if (!empty($cellValue) && preg_match('/AKPH\s\d{4}\s-\s[A-Z]+/', $cellValue)) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
     protected function getStatusColor(string $status): string
     {
         switch (strtolower(trim($status))) {
             case 'paid':
-                return 'C6EFCE'; // Light green
+                return 'F0CFA3';
             case 'pending':
-                return 'FFEB9C'; // Light yellow
+                return 'F2E6B6'; 
             case 'unpaid':
-                return 'FFC7CE'; // Light red
+                return 'FFFFFF';
             default:
-                return 'FFFFFF'; // White default
+                return 'FFFFFF';
         }
     }
 
@@ -75,13 +137,31 @@ trait YearlySheetTrait
             $this->setupYearlyShipmentSheet($yearlySheet);
         }
 
+        // Get the month from the china received date or created_at
+        $dateToCheck = $data['china_received_date'] ?? $data['created_at'] ?? null;
+        $currentMonth = $this->getMonthFromDate($dateToCheck);
+        
+        // Get the last row with data
         $lastRow = $yearlySheet->getHighestRow();
         if ($lastRow < 1) {
-            $lastRow = 1;  // Headers are at row 1, so start data from row 2
+            $lastRow = 1;
+        }
+        
+        // Find the last month header row
+        $lastMonthHeaderRow = $this->findLastMonthHeaderRow($yearlySheet);
+        $lastMonth = $lastMonthHeaderRow ? $yearlySheet->getCell('A' . $lastMonthHeaderRow)->getValue() : null;
+        
+        $newRow = $lastRow + 1;
+        
+        // ALWAYS show month header BEFORE data for new month
+        if ($lastMonth !== $currentMonth) {
+            // Insert a new row for the month header at the current position
+            $yearlySheet->insertNewRowBefore($newRow);
+            $this->addMonthHeaderRow($yearlySheet, $newRow, $currentMonth);
+            $newRow++; // Move past the header row
         }
 
-        $newRow = $lastRow + 1;
-
+        // Now write the data row
         $inboundCost = floatval($data['inbound_cost'] ?? 0);
         $serviceFee = floatval($data['service_fee'] ?? 0);
         $overweight = floatval($data['overweight'] ?? 0);
@@ -105,7 +185,7 @@ trait YearlySheetTrait
         // Write data to cells
         $yearlySheet->setCellValue('A' . $newRow, $rowIndex);
         $yearlySheet->setCellValue('B' . $newRow, $data['container_code'] ?? '');
-        $yearlySheet->setCellValue('C' . $newRow, isset($data['china_recieved_date']) ? date('m/d/Y', strtotime($data['china_recieved_date'])) : date('m/d/Y'));
+        $yearlySheet->setCellValue('C' . $newRow, isset($data['china_received_date']) ? date('m/d/Y', strtotime($data['china_received_date'])) : date('m/d/Y'));
         $yearlySheet->setCellValue('D' . $newRow, $data['order_reference'] ?? '');
         $yearlySheet->setCellValue('E' . $newRow, 'AKPH-' . ($data['client_code'] ?? ''));
         $yearlySheet->setCellValue('F' . $newRow, $productValue);
@@ -129,68 +209,51 @@ trait YearlySheetTrait
         $yearlySheet->setCellValue('Y' . $newRow, $akphbilling);
         $yearlySheet->setCellValue('Z' . $newRow, $data['handler'] ?? '');
 
-        // Apply base styling to all data columns (A to Z)
+        // Apply styles to all columns
         $allColumns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
-                       'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',];
+                    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'Y', 'Z'];
+        
+        $specialColors = [
+            'Y' => ['color' => '99ACBF'],
+            'Z' => ['color' => 'C78197'],
+        ];
         
         foreach ($allColumns as $col) {
             $cellCoordinate = $col . $newRow;
             
+            // Set alignment
             $yearlySheet->getStyle($cellCoordinate)->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER)
                 ->setWrapText(true);
+            
+            // Set borders
             $yearlySheet->getStyle($cellCoordinate)->applyFromArray([
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => Border::BORDER_THIN,
                         'color' => ['rgb' => 'CCCCCC']
                     ]
-                ],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $statusColor]]
+                ]
             ]);
             
-        }
-
-            $yearlySheet->getStyle('X' . $newRow)->applyFromArray([
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' =>Border::BORDER_THIN,
-                        'color' => ['rgb' => 'CCCCCC']
-                    ],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
-                ]
-            ]);
-
-            $yearlySheet->getStyle('Y'. $newRow)->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                ->setVertical(Alignment::VERTICAL_CENTER)
-                ->setWrapText(true);
-
-            $yearlySheet->getStyle('Y' . $newRow)->applyFromArray([
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' =>Border::BORDER_THIN,
-                        'color' => ['rgb' => 'CCCCCC']
-                    ],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '99ACBF']]
-                ]
-            ]);
-
-            $yearlySheet->getStyle('Z' . $newRow)->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                ->setVertical(Alignment::VERTICAL_CENTER)
-                ->setWrapText(true);
-
-                $yearlySheet->getStyle('Z' . $newRow)->applyFromArray([
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' =>Border::BORDER_THIN,
-                            'color' => ['rgb' => 'CCCCCC']
-                        ],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'C78197']]
+            // Set fill color
+            if (isset($specialColors[$col])) {
+                $yearlySheet->getStyle($cellCoordinate)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $specialColors[$col]['color']]
                     ]
                 ]);
+            } else {
+                $yearlySheet->getStyle($cellCoordinate)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $statusColor]
+                    ]
+                ]);
+            }
+        }
 
         // Apply currency formatting
         $currencyColumns = ['M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
